@@ -452,7 +452,7 @@
                 <div class="score">Score: <span id="score">0</span></div>
                 <div class="level-display" id="levelDisplay" style="display: none;">Level: <span id="currentLevel">-</span></div>
                 <div class="high-score">High Score: <span id="highScore">0</span></div>
-                <div class="food-debug" id="foodDebug" style="display: none;">Food: <span id="foodCoords">-</span></div>
+                <div class="food-debug" id="foodDebug" style="display: none;">Food: <span id="foodCoords">-</span> | Grid: <span id="gridInfo">-</span></div>
             </div>
             <div class="level-buttons">
                 <button class="level-btn beginner" onclick="startGame('beginner')">🐣 Beginner</button>
@@ -502,7 +502,7 @@
         const finalScoreElement = document.getElementById('finalScore');
 
         const gridSize = 25;
-        const tileCount = canvas.width / gridSize;
+        let tileCount = 20; // Default fallback value
 
         let snake = [
             {x: 10, y: 10}
@@ -516,14 +516,38 @@
         let gameSpeed = 150; // Default speed (intermediate)
         let currentLevel = '';
         let gameInterval = null; // Global game loop interval
+        let lastFoodTime = Date.now(); // Track when food was last valid
+        let foodMissingThreshold = 3000; // 3 seconds threshold for missing food
 
         highScoreElement.textContent = highScore;
 
         function generateFood() {
+            console.log('=== GENERATE FOOD START ===');
+            console.log('Snake length:', snake.length);
+            console.log('Snake positions:', snake.map(s => `(${s.x},${s.y})`));
+            console.log('Grid size:', tileCount);
+            
+            // Ensure tileCount is valid before proceeding
+            if (!tileCount || tileCount <= 0 || tileCount > 100) {
+                console.log('🚨 INVALID TILE COUNT:', tileCount, '- Recalculating...');
+                calculateTileCount();
+                if (!tileCount || tileCount <= 0) {
+                    console.log('❌ Still invalid tile count, using emergency fallback');
+                    tileCount = 20; // Emergency fallback
+                }
+            }
+            
+            // Check if snake fills entire board (impossible to place food)
+            if (snake.length >= tileCount * tileCount) {
+                console.log('CRITICAL: Snake fills entire board!');
+                return;
+            }
+            
             let attempts = 0;
-            const maxAttempts = 100;
+            const maxAttempts = 200; // Increased attempts for longer snakes
             let newFood;
             
+            // First, try random placement
             do {
                 newFood = {
                     x: Math.floor(Math.random() * tileCount),
@@ -536,20 +560,23 @@
                 for (let segment of snake) {
                     if (segment.x === newFood.x && segment.y === newFood.y) {
                         onSnake = true;
-                        console.log('Food would spawn on snake at:', newFood.x, newFood.y, 'snake segment at:', segment.x, segment.y);
                         break;
                     }
                 }
                 
                 if (!onSnake) {
                     food = newFood;
+                    console.log('✅ Random placement successful at:', food.x, food.y);
                     break;
                 }
             } while (attempts < maxAttempts);
             
-            // If we couldn't find a good spot, try to find any available position
-            if (attempts >= maxAttempts) {
-                console.log('Could not find good spot, searching for any available position...');
+            // If random placement failed, use systematic search
+            if (!food || typeof food.x !== 'number') {
+                console.log('Random placement failed, using systematic search...');
+                
+                // Create a grid of available positions
+                let availablePositions = [];
                 for (let x = 0; x < tileCount; x++) {
                     for (let y = 0; y < tileCount; y++) {
                         let available = true;
@@ -560,54 +587,44 @@
                             }
                         }
                         if (available) {
-                            food = {x: x, y: y};
-                            console.log('Found available position at:', x, y);
-                            break;
+                            availablePositions.push({x: x, y: y});
                         }
                     }
-                    if (food && food.x === x) break;
                 }
                 
-                // If still no position found, place it randomly (this shouldn't happen unless snake fills entire board)
-                if (!food || typeof food.x !== 'number') {
-                    food = {
-                        x: Math.floor(Math.random() * tileCount),
-                        y: Math.floor(Math.random() * tileCount)
-                    };
-                    console.log('Emergency food placement at:', food.x, food.y);
+                console.log('Available positions found:', availablePositions.length);
+                
+                if (availablePositions.length > 0) {
+                    // Pick a random available position
+                    const randomIndex = Math.floor(Math.random() * availablePositions.length);
+                    food = availablePositions[randomIndex];
+                    console.log('✅ Systematic placement successful at:', food.x, food.y);
+                } else {
+                    console.log('❌ No available positions found!');
+                    // This should never happen, but just in case
+                    food = {x: 0, y: 0};
                 }
             }
             
-            // Validate that food is not on snake and regenerate if needed
-            let maxValidationAttempts = 10;
-            let validationAttempts = 0;
-            
-            while (validationAttempts < maxValidationAttempts) {
-                let foodOnSnake = false;
-                for (let segment of snake) {
-                    if (segment.x === food.x && segment.y === food.y) {
-                        foodOnSnake = true;
-                        console.log('ERROR: Food generated on snake! Regenerating...');
-                        break;
-                    }
-                }
-                
-                if (!foodOnSnake) {
-                    break; // Food is in a valid position
-                }
-                
-                // Regenerate food
-                food = {
-                    x: Math.floor(Math.random() * tileCount),
-                    y: Math.floor(Math.random() * tileCount)
-                };
-                validationAttempts++;
+            // Final validation
+            if (!food || typeof food.x !== 'number' || typeof food.y !== 'number') {
+                console.log('CRITICAL: Food object still invalid after all attempts!');
+                food = {x: 10, y: 10}; // Emergency fallback
             }
             
-            // Final safety check - if still on snake, place at a guaranteed safe position
-            if (validationAttempts >= maxValidationAttempts) {
-                console.log('Final safety check: placing food at guaranteed safe position');
-                // Find the first available position
+            // Verify food is not on snake
+            let finalCheck = false;
+            for (let segment of snake) {
+                if (segment.x === food.x && segment.y === food.y) {
+                    finalCheck = true;
+                    console.log('🚨 FINAL CHECK FAILED: Food on snake! Regenerating...');
+                    break;
+                }
+            }
+            
+            if (finalCheck) {
+                console.log('Regenerating food due to final check failure...');
+                // Try one more time with a different approach
                 for (let x = 0; x < tileCount; x++) {
                     for (let y = 0; y < tileCount; y++) {
                         let safe = true;
@@ -619,7 +636,7 @@
                         }
                         if (safe) {
                             food = {x: x, y: y};
-                            console.log('Guaranteed safe food placement at:', x, y);
+                            console.log('✅ Emergency placement at:', x, y);
                             break;
                         }
                     }
@@ -627,17 +644,15 @@
                 }
             }
             
-            // Ensure food object is properly set
-            if (!food || typeof food.x !== 'number' || typeof food.y !== 'number') {
-                console.log('CRITICAL ERROR: Food object is invalid, creating emergency food');
-                food = {x: 5, y: 5}; // Emergency fallback position
-            }
+            console.log('=== GENERATE FOOD END ===');
+            console.log('Final food position:', food.x, food.y);
+            console.log('Food object validity:', food && typeof food.x === 'number' && typeof food.y === 'number');
+            console.log('Snake collision check:', snake.some(s => s.x === food.x && s.y === food.y));
             
-            console.log('Food generated at:', food.x, food.y); // Debug log
-            console.log('Food object:', food); // Debug log
-            console.log('Snake length:', snake.length); // Debug log
-            console.log('Grid size:', gridSize); // Debug log
-            console.log('Canvas dimensions:', canvas.width, 'x', canvas.height); // Debug log
+            // Reset the food timer since we just generated valid food
+            lastFoodTime = Date.now();
+            
+            return food; // Explicitly return the food object
         }
 
         function drawGame() {
@@ -813,8 +828,34 @@
             
             // Generate new food if food was eaten
             if (foodEaten) {
+                console.log('🔄 Regenerating food after eating...');
                 generateFood();
-                console.log('Food eaten! New food at:', food.x, food.y); // Debug log
+                
+                // Verify new food was generated properly
+                if (food && typeof food.x === 'number' && typeof food.y === 'number') {
+                    console.log('✅ New food generated successfully at:', food.x, food.y);
+                    
+                    // Double-check food is not on snake
+                    let foodOnSnake = false;
+                    for (let segment of snake) {
+                        if (segment.x === food.x && segment.y === food.y) {
+                            foodOnSnake = true;
+                            console.log('🚨 New food spawned on snake! Regenerating again...');
+                            break;
+                        }
+                    }
+                    
+                    if (foodOnSnake) {
+                        console.log('Regenerating food again due to snake collision...');
+                        generateFood();
+                        console.log('Second attempt food at:', food.x, food.y);
+                    }
+                } else {
+                    console.log('❌ Food generation failed! Food object:', food);
+                    // Emergency food generation
+                    food = {x: 15, y: 15};
+                    generateFood();
+                }
             } else {
                 snake.pop();
             }
@@ -872,6 +913,10 @@
             
             // Add player to live scoreboard
             addPlayerToLiveScoreboard(playerName);
+            
+            // Ensure tile count is correct before generating food
+            calculateTileCount();
+            console.log('Game started with tile count:', tileCount);
             
             // Generate food and ensure it's visible
             generateFood();
@@ -974,8 +1019,31 @@
 
         function gameLoop() {
             if (gameRunning) {
+                // FOOD VALIDATION: Check food validity every frame
+                if (!food || typeof food.x !== 'number' || typeof food.y !== 'number') {
+                    console.log('🚨 GAME LOOP: Food is invalid, regenerating immediately...');
+                    generateFood();
+                } else {
+                    // Check if food is on snake
+                    let foodOnSnake = false;
+                    for (let segment of snake) {
+                        if (segment.x === food.x && segment.y === food.y) {
+                            foodOnSnake = true;
+                            console.log('🚨 GAME LOOP: Food on snake detected, regenerating...');
+                            break;
+                        }
+                    }
+                    if (foodOnSnake) {
+                        generateFood();
+                    }
+                }
+                
+                // Additional safety check using force regeneration
+                forceFoodRegeneration();
+                
                 moveSnake();
                 drawGame();
+                
                 // Debug: log food position during gameplay
                 if (food && typeof food.x === 'number' && typeof food.y === 'number') {
                     console.log('Game loop - Food at:', food.x, food.y);
@@ -1213,6 +1281,7 @@
             console.log('🚨 PERIODIC CHECK: Food is invalid, regenerating...');
             generateFood();
             console.log('Food regenerated during health check:', food);
+            lastFoodTime = Date.now(); // Reset timer
         }
         
         // AGGRESSIVE FOOD MONITORING: Check every frame
@@ -1229,9 +1298,30 @@
             if (!foodStillValid) {
                 generateFood();
                 console.log('Food regenerated due to snake collision:', food);
+                lastFoodTime = Date.now(); // Reset timer
+            } else {
+                // Food is valid, update timer
+                lastFoodTime = Date.now();
             }
         }
-            }, 2000); // Update every 2 seconds
+        
+        // TIME-BASED FOOD MONITORING: Force regeneration if food has been missing too long
+        if (gameRunning && (Date.now() - lastFoodTime > foodMissingThreshold)) {
+            console.log('⏰ TIME-BASED CHECK: Food missing for too long, forcing regeneration...');
+            generateFood();
+            lastFoodTime = Date.now();
+        }
+        
+        // TILE COUNT VALIDATION: Ensure tile count is always valid
+        if (gameRunning && (!tileCount || tileCount <= 0 || tileCount > 100)) {
+            console.log('🚨 TILE COUNT VALIDATION: Invalid tile count detected:', tileCount);
+            calculateTileCount();
+            if (!food || typeof food.x !== 'number' || typeof food.y !== 'number') {
+                console.log('🔄 Regenerating food after tile count fix...');
+                generateFood();
+            }
+        }
+            }, 1000); // Update every 1 second for more frequent food monitoring
         }
 
         // Refresh live scores manually
@@ -1244,6 +1334,7 @@
         function updateFoodDebug() {
             const foodDebugElement = document.getElementById('foodDebug');
             const foodCoordsElement = document.getElementById('foodCoords');
+            const gridInfoElement = document.getElementById('gridInfo');
             
             if (food && typeof food.x === 'number' && typeof food.y === 'number') {
                 foodCoordsElement.textContent = `(${food.x}, ${food.y})`;
@@ -1252,6 +1343,48 @@
                 foodCoordsElement.textContent = 'INVALID';
                 foodDebugElement.style.display = 'block';
             }
+            
+            // Show grid information
+            if (gridInfoElement) {
+                gridInfoElement.textContent = `${tileCount}x${tileCount} (${tileCount * tileCount} tiles)`;
+            }
+        }
+        
+        // Calculate proper tile count based on canvas dimensions
+        function calculateTileCount() {
+            if (canvas && canvas.width > 0) {
+                const calculatedTileCount = Math.floor(canvas.width / gridSize);
+                console.log('Canvas width:', canvas.width, 'Grid size:', gridSize, 'Calculated tile count:', calculatedTileCount);
+                
+                if (calculatedTileCount > 0 && calculatedTileCount < 100) { // Sanity check
+                    tileCount = calculatedTileCount;
+                    console.log('✅ Tile count updated to:', tileCount);
+                } else {
+                    console.log('⚠️ Calculated tile count invalid, using fallback:', tileCount);
+                }
+            } else {
+                console.log('⚠️ Canvas not ready, using fallback tile count:', tileCount);
+            }
+        }
+        
+        // Force food regeneration if needed
+        function forceFoodRegeneration() {
+            if (!food || typeof food.x !== 'number' || typeof food.y !== 'number') {
+                console.log('🔄 FORCE REGENERATION: Food is invalid, regenerating...');
+                generateFood();
+                return true;
+            }
+            
+            // Check if food is on snake
+            for (let segment of snake) {
+                if (segment.x === food.x && segment.y === food.y) {
+                    console.log('🔄 FORCE REGENERATION: Food on snake, regenerating...');
+                    generateFood();
+                    return true;
+                }
+            }
+            
+            return false;
         }
         
         // Initialize game when page is fully loaded
@@ -1271,6 +1404,10 @@
             
             // Initialize game components
             try {
+                // Calculate proper tile count first
+                calculateTileCount();
+                console.log('Initial tile count:', tileCount);
+                
                 generateFood(); // Generate initial food
                 console.log('Initial food position:', food);
                 
@@ -1298,3 +1435,4 @@
     </script>
 </body>
 </html>
+

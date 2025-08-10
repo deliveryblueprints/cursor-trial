@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐍 Gayatri's Snake Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        h1 {
+            color: white;
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .description {
+            color: white;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .play-button {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 25px;
+            font-size: 1.3em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .play-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .features {
+            margin-top: 30px;
+            color: white;
+            text-align: left;
+        }
+        
+        .features h3 {
+            color: #4ecdc4;
+            margin-bottom: 15px;
+        }
+        
+        .features ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .features li {
+            margin: 8px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .features li:before {
+            content: "🎮";
+            position: absolute;
+            left: 0;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9em;
+        }
+        
+        .loading {
+            display: none;
+            margin-top: 20px;
+            color: white;
+        }
+        
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐍 Gayatri's Snake Game</h1>
+        
+        <div class="description">
+            Welcome to an exciting Snake game with live multiplayer scoreboard! 
+            Challenge yourself with different difficulty levels and compete with players worldwide.
+        </div>
+        
+        <a href="snake-game.html" class="play-button" onclick="showLoading()">
+            🚀 Start Playing
+        </a>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            Loading your game...
+        </div>
+        
+        <div class="features">
+            <h3>🎯 Game Features:</h3>
+            <ul>
+                <li>Two difficulty levels: Beginner & Intermediate</li>
+                <li>Live multiplayer scoreboard</li>
+                <li>Player name customization</li>
+                <li>High score tracking</li>
+                <li>Beautiful gradient graphics</li>
+                <li>Mobile-friendly controls</li>
+            </ul>
+        </div>
+        
+        <div class="footer">
+            Built with ❤️ using HTML5 Canvas & JavaScript
+        </div>
+    </div>
+
+    <script>
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            
+            // Add a small delay to show the loading animation
+            setTimeout(() => {
+                // The page will navigate to snake-game.html
+            }, 500);
+        }
+        
+        // Auto-redirect after 5 seconds if user doesn't click
+        setTimeout(() => {
+            if (window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/')) {
+                console.log('Auto-redirecting to snake game...');
+                window.location.href = 'snake-game.html';
+            }
+        }, 5000);
+    </script>
+</body>
+</html>

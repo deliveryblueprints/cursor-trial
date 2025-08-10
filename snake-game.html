@@ -454,10 +454,11 @@
                 <div class="high-score">High Score: <span id="highScore">0</span></div>
                 <div class="food-debug" id="foodDebug" style="display: none;">Food: <span id="foodCoords">-</span> | Grid: <span id="gridInfo">-</span></div>
             </div>
-            <div class="level-buttons">
-                <button class="level-btn beginner" onclick="startGame('beginner')">🐣 Beginner</button>
-                <button class="level-btn intermediate" onclick="startGame('intermediate')">⚡ Intermediate</button>
-            </div>
+                    <div class="level-buttons">
+            <button class="level-btn beginner" onclick="startGame('beginner')">🐣 Beginner</button>
+            <button class="level-btn intermediate" onclick="startGame('intermediate')">⚡ Intermediate</button>
+            <button class="level-btn" onclick="toggleDebugGrid()" style="background: linear-gradient(45deg, #9b59b6, #8e44ad);">🔍 Debug Grid</button>
+        </div>
         </div>
         
         <canvas id="gameCanvas" width="800" height="600"></canvas>
@@ -502,7 +503,7 @@
         const finalScoreElement = document.getElementById('finalScore');
 
         const gridSize = 25;
-        let tileCount = 20; // Default fallback value
+        let tileCount = 32; // Fixed tile count for 800x600 canvas (800/25 = 32, 600/25 = 24)
 
         let snake = [
             {x: 10, y: 10}
@@ -525,20 +526,15 @@
             console.log('=== GENERATE FOOD START ===');
             console.log('Snake length:', snake.length);
             console.log('Snake positions:', snake.map(s => `(${s.x},${s.y})`));
-            console.log('Grid size:', tileCount);
             
-            // Ensure tileCount is valid before proceeding
-            if (!tileCount || tileCount <= 0 || tileCount > 100) {
-                console.log('🚨 INVALID TILE COUNT:', tileCount, '- Recalculating...');
-                calculateTileCount();
-                if (!tileCount || tileCount <= 0) {
-                    console.log('❌ Still invalid tile count, using emergency fallback');
-                    tileCount = 20; // Emergency fallback
-                }
-            }
+            // Fixed grid dimensions for 800x600 canvas - NEVER CHANGE THESE
+            const maxX = 32; // 800/25 = 32 tiles horizontally
+            const maxY = 24; // 600/25 = 24 tiles vertically
+            
+            console.log('Using fixed grid bounds:', maxX, 'x', maxY);
             
             // Check if snake fills entire board (impossible to place food)
-            if (snake.length >= tileCount * tileCount) {
+            if (snake.length >= maxX * maxY) {
                 console.log('CRITICAL: Snake fills entire board!');
                 return;
             }
@@ -547,11 +543,11 @@
             const maxAttempts = 200; // Increased attempts for longer snakes
             let newFood;
             
-            // First, try random placement
+            // First, try random placement within valid bounds
             do {
                 newFood = {
-                    x: Math.floor(Math.random() * tileCount),
-                    y: Math.floor(Math.random() * tileCount)
+                    x: Math.floor(Math.random() * maxX),
+                    y: Math.floor(Math.random() * maxY)
                 };
                 attempts++;
                 
@@ -575,10 +571,10 @@
             if (!food || typeof food.x !== 'number') {
                 console.log('Random placement failed, using systematic search...');
                 
-                // Create a grid of available positions
+                // Create a grid of available positions within valid bounds
                 let availablePositions = [];
-                for (let x = 0; x < tileCount; x++) {
-                    for (let y = 0; y < tileCount; y++) {
+                for (let x = 0; x < maxX; x++) {
+                    for (let y = 0; y < maxY; y++) {
                         let available = true;
                         for (let segment of snake) {
                             if (segment.x === x && segment.y === y) {
@@ -624,9 +620,9 @@
             
             if (finalCheck) {
                 console.log('Regenerating food due to final check failure...');
-                // Try one more time with a different approach
-                for (let x = 0; x < tileCount; x++) {
-                    for (let y = 0; y < tileCount; y++) {
+                // Try one more time with a different approach within valid bounds
+                for (let x = 0; x < maxX; x++) {
+                    for (let y = 0; y < maxY; y++) {
                         let safe = true;
                         for (let seg of snake) {
                             if (seg.x === x && seg.y === y) {
@@ -675,10 +671,22 @@
                 ctx.fillStyle = '#000000';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-                // Debug: Draw a test food at a known position to verify drawing works
+                // Debug: Draw food position indicator and grid bounds at top of canvas
                 ctx.fillStyle = '#ff0000';
-                ctx.fillRect(50, 50, 25, 25);
-                console.log('Debug: Drew test red square at (50, 50)');
+                ctx.font = '12px Arial';
+                ctx.fillText(`Canvas: 800x600 | Grid: 25x25 | Tiles: 32x24`, 10, 20);
+                
+                if (food && typeof food.x === 'number' && typeof food.y === 'number') {
+                    ctx.fillText(`Food at: (${food.x}, ${food.y}) | Canvas pos: (${food.x * 25}, ${food.y * 25})`, 10, 35);
+                    
+                                    // Draw a small red dot at the food's grid position for visual reference
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(food.x * 25, food.y * 25, 3, 3);
+                console.log('Debug: Drew food position indicator and grid reference');
+            }
+            
+            // Draw debug grid to visualize tile boundaries
+            drawDebugGrid();
 
             // Draw snake body as connected segments with gradient effect
             ctx.lineWidth = 4;
@@ -760,22 +768,53 @@
             if (food && typeof food.x === 'number' && typeof food.y === 'number') {
                 console.log('✅ Food is valid, drawing now...');
                 
-                // Set text color to ensure visibility
-                ctx.fillStyle = '#ffffff';
-                ctx.font = `${gridSize}px Arial`;
-                ctx.fillText('🐭', food.x * gridSize + gridSize/2, food.y * gridSize + gridSize/2);
-                console.log('✅ Food emoji drawn successfully');
+                // Calculate exact canvas positions
+                const foodX = food.x * gridSize;
+                const foodY = food.y * gridSize;
+                const foodCenterX = foodX + gridSize/2;
+                const foodCenterY = foodY + gridSize/2;
                 
-                // Also draw a small white dot as backup to ensure food is visible
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(food.x * gridSize + gridSize/4, food.y * gridSize + gridSize/4, gridSize/2, gridSize/2);
-                console.log('✅ Backup white dot drawn successfully');
+                console.log('Food canvas positions - X:', foodX, 'Y:', foodY, 'Center X:', foodCenterX, 'Center Y:', foodCenterY);
                 
-                // Draw a bright red border around the food for maximum visibility
-                ctx.strokeStyle = '#ff0000';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(food.x * gridSize, food.y * gridSize, gridSize, gridSize);
-                console.log('✅ Red border drawn around food');
+                // Validate food position is within canvas bounds
+                if (foodX >= 0 && foodX < canvas.width && foodY >= 0 && foodY < canvas.height) {
+                    console.log('✅ Food position is within canvas bounds');
+                    
+                    // Draw a bright background circle first to ensure visibility
+                    ctx.fillStyle = '#ffff00'; // Bright yellow background
+                    ctx.beginPath();
+                    ctx.arc(foodCenterX, foodCenterY, gridSize/2, 0, 2 * Math.PI);
+                    ctx.fill();
+                    console.log('✅ Yellow background circle drawn');
+                    
+                    // Set text color to ensure visibility
+                    ctx.fillStyle = '#000000'; // Black text on yellow background
+                    ctx.font = `${gridSize}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('🐭', foodCenterX, foodCenterY);
+                    console.log('✅ Food emoji drawn successfully');
+                    
+                    // Draw a bright red border around the food for maximum visibility
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(foodX, foodY, gridSize, gridSize);
+                    console.log('✅ Red border drawn around food');
+                    
+                    // Draw a bright green dot in the center as additional backup
+                    ctx.fillStyle = '#00ff00';
+                    ctx.beginPath();
+                    ctx.arc(foodCenterX, foodCenterY, 3, 0, 2 * Math.PI);
+                    ctx.fill();
+                    console.log('✅ Green center dot drawn');
+                    
+                } else {
+                    console.log('❌ FOOD POSITION OUTSIDE CANVAS BOUNDS!');
+                    console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
+                    console.log('Food would be at:', foodX, foodY);
+                    console.log('Regenerating food...');
+                    generateFood();
+                }
                 
             } else {
                 console.log('❌ FOOD IS INVALID - CANNOT DRAW');
@@ -794,8 +833,10 @@
         function moveSnake() {
             const head = {x: snake[0].x + dx, y: snake[0].y + dy};
 
-            // Check wall collision
-            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+            // Check wall collision with fixed bounds
+            const maxX = 32; // 800/25 = 32 tiles horizontally
+            const maxY = 24; // 600/25 = 24 tiles vertically
+            if (head.x < 0 || head.x >= maxX || head.y < 0 || head.y >= maxY) {
                 gameOver();
                 return;
             }
@@ -914,8 +955,8 @@
             // Add player to live scoreboard
             addPlayerToLiveScoreboard(playerName);
             
-            // Ensure tile count is correct before generating food
-            calculateTileCount();
+            // Use fixed tile count for consistent gameplay
+            tileCount = 32; // Fixed value for 800x600 canvas
             console.log('Game started with tile count:', tileCount);
             
             // Generate food and ensure it's visible
@@ -1019,22 +1060,28 @@
 
         function gameLoop() {
             if (gameRunning) {
-                // FOOD VALIDATION: Check food validity every frame
+                // AGGRESSIVE FOOD VALIDATION: Check food validity and bounds every frame
                 if (!food || typeof food.x !== 'number' || typeof food.y !== 'number') {
                     console.log('🚨 GAME LOOP: Food is invalid, regenerating immediately...');
                     generateFood();
                 } else {
-                    // Check if food is on snake
-                    let foodOnSnake = false;
-                    for (let segment of snake) {
-                        if (segment.x === food.x && segment.y === food.y) {
-                            foodOnSnake = true;
-                            console.log('🚨 GAME LOOP: Food on snake detected, regenerating...');
-                            break;
-                        }
-                    }
-                    if (foodOnSnake) {
+                    // Check if food is outside valid bounds
+                    if (food.x < 0 || food.x >= 32 || food.y < 0 || food.y >= 24) {
+                        console.log('🚨 GAME LOOP: Food outside bounds at', food.x, food.y, '- regenerating...');
                         generateFood();
+                    } else {
+                        // Check if food is on snake
+                        let foodOnSnake = false;
+                        for (let segment of snake) {
+                            if (segment.x === food.x && segment.y === food.y) {
+                                foodOnSnake = true;
+                                console.log('🚨 GAME LOOP: Food on snake detected, regenerating...');
+                                break;
+                            }
+                        }
+                        if (foodOnSnake) {
+                            generateFood();
+                        }
                     }
                 }
                 
@@ -1315,7 +1362,7 @@
         // TILE COUNT VALIDATION: Ensure tile count is always valid
         if (gameRunning && (!tileCount || tileCount <= 0 || tileCount > 100)) {
             console.log('🚨 TILE COUNT VALIDATION: Invalid tile count detected:', tileCount);
-            calculateTileCount();
+            tileCount = 32; // Reset to fixed value
             if (!food || typeof food.x !== 'number' || typeof food.y !== 'number') {
                 console.log('🔄 Regenerating food after tile count fix...');
                 generateFood();
@@ -1344,33 +1391,89 @@
                 foodDebugElement.style.display = 'block';
             }
             
-            // Show grid information
+            // Show grid information with correct dimensions - ALWAYS USE FIXED VALUES
             if (gridInfoElement) {
-                gridInfoElement.textContent = `${tileCount}x${tileCount} (${tileCount * tileCount} tiles)`;
+                gridInfoElement.textContent = `32x24 (768 tiles)`;
             }
         }
         
-        // Calculate proper tile count based on canvas dimensions
-        function calculateTileCount() {
-            if (canvas && canvas.width > 0) {
-                const calculatedTileCount = Math.floor(canvas.width / gridSize);
-                console.log('Canvas width:', canvas.width, 'Grid size:', gridSize, 'Calculated tile count:', calculatedTileCount);
-                
-                if (calculatedTileCount > 0 && calculatedTileCount < 100) { // Sanity check
-                    tileCount = calculatedTileCount;
-                    console.log('✅ Tile count updated to:', tileCount);
-                } else {
-                    console.log('⚠️ Calculated tile count invalid, using fallback:', tileCount);
-                }
-            } else {
-                console.log('⚠️ Canvas not ready, using fallback tile count:', tileCount);
+        // Fixed tile count for consistent gameplay
+        // Canvas: 800x600, Grid: 25x25, Tiles: 32x24
+        
+        // Draw test pattern to verify canvas is working
+        function drawTestPattern() {
+            console.log('🧪 Drawing test pattern to verify canvas...');
+            
+            // Draw a bright blue square in top-left corner
+            ctx.fillStyle = '#0000ff';
+            ctx.fillRect(0, 0, 50, 50);
+            console.log('✅ Blue test square drawn at (0,0)');
+            
+            // Draw a bright green circle in top-right corner
+            ctx.fillStyle = '#00ff00';
+            ctx.beginPath();
+            ctx.arc(canvas.width - 25, 25, 25, 0, 2 * Math.PI);
+            ctx.fill();
+            console.log('✅ Green test circle drawn at top-right');
+            
+            // Draw a bright red triangle in bottom-left corner
+            ctx.fillStyle = '#ff0000';
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height - 50);
+            ctx.lineTo(50, canvas.height);
+            ctx.lineTo(50, canvas.height - 50);
+            ctx.closePath();
+            ctx.fill();
+            console.log('✅ Red test triangle drawn at bottom-left');
+        }
+        
+        // Global debug grid toggle
+        let debugGridEnabled = false;
+        
+        // Draw visual grid for debugging
+        function drawDebugGrid() {
+            if (!debugGridEnabled) return;
+            
+            ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
+            ctx.lineWidth = 1;
+            
+            // Draw vertical lines every 25 pixels
+            for (let x = 0; x <= canvas.width; x += 25) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
             }
+            
+            // Draw horizontal lines every 25 pixels
+            for (let y = 0; y <= canvas.height; y += 25) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            console.log('Debug grid drawn');
+        }
+        
+        // Toggle debug grid on/off
+        function toggleDebugGrid() {
+            debugGridEnabled = !debugGridEnabled;
+            console.log('Debug grid toggled:', debugGridEnabled ? 'ON' : 'OFF');
+            drawGame(); // Redraw to show/hide grid
         }
         
         // Force food regeneration if needed
         function forceFoodRegeneration() {
             if (!food || typeof food.x !== 'number' || typeof food.y !== 'number') {
                 console.log('🔄 FORCE REGENERATION: Food is invalid, regenerating...');
+                generateFood();
+                return true;
+            }
+            
+            // Check if food is outside valid bounds
+            if (food.x < 0 || food.x >= 32 || food.y < 0 || food.y >= 24) {
+                console.log('🔄 FORCE REGENERATION: Food outside bounds at', food.x, food.y, '- regenerating...');
                 generateFood();
                 return true;
             }
@@ -1404,8 +1507,8 @@
             
             // Initialize game components
             try {
-                // Calculate proper tile count first
-                calculateTileCount();
+                // Use fixed tile count for consistent gameplay
+                tileCount = 32; // Fixed value for 800x600 canvas
                 console.log('Initial tile count:', tileCount);
                 
                 generateFood(); // Generate initial food

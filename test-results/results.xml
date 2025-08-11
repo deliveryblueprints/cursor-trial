@@ -1,0 +1,48 @@
+<testsuites id="" name="" tests="1" failures="1" skipped="0" errors="0" time="6.217840999999999">
+<testsuite name="food-visibility.spec.ts" timestamp="2025-08-11T21:45:15.126Z" hostname="chromium" tests="1" failures="1" skipped="0" time="5.767" errors="0">
+<testcase name="Food Visibility Tests › Food Generation and Positioning › should show food canvas position in debug info" classname="food-visibility.spec.ts" time="5.767">
+<failure message="food-visibility.spec.ts:61:9 should show food canvas position in debug info" type="FAILURE">
+<![CDATA[  [chromium] › food-visibility.spec.ts:61:9 › Food Visibility Tests › Food Generation and Positioning › should show food canvas position in debug info 
+
+    Error: Timed out 5000ms waiting for expect(locator).toBeVisible()
+
+    Locator: locator('text=Canvas: 800x600 | Grid: 25x25 | Tiles: 32x24')
+    Expected: visible
+    Received: <element(s) not found>
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for locator('text=Canvas: 800x600 | Grid: 25x25 | Tiles: 32x24')
+
+
+      72 |       // The debug text should show both grid and canvas positions
+      73 |       // This tests the debug overlay we added
+    > 74 |       await expect(page.locator('text=Canvas: 800x600 | Grid: 25x25 | Tiles: 32x24')).toBeVisible();
+         |                                                                                       ^
+      75 |     });
+      76 |
+      77 |     test('should regenerate food if it spawns outside bounds', async ({ page }) => {
+        at /Users/gayatriprakash/Projects/cursor trial/tests/food-visibility.spec.ts:74:87
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../test-results/food-visibility-Food-Visib-ec74d-nvas-position-in-debug-info-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../test-results/food-visibility-Food-Visib-ec74d-nvas-position-in-debug-info-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../test-results/food-visibility-Food-Visib-ec74d-nvas-position-in-debug-info-chromium/error-context.md
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|food-visibility-Food-Visib-ec74d-nvas-position-in-debug-info-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|food-visibility-Food-Visib-ec74d-nvas-position-in-debug-info-chromium/video.webm]]
+
+[[ATTACHMENT|food-visibility-Food-Visib-ec74d-nvas-position-in-debug-info-chromium/error-context.md]]
+]]>
+</system-out>
+</testcase>
+</testsuite>
+</testsuites>

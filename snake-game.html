@@ -672,18 +672,38 @@
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             
                 // Debug: Draw food position indicator and grid bounds at top of canvas
+                // Save current context to prevent interference from other drawing operations
+                ctx.save();
+                
+                // Draw background for better text visibility
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+                ctx.fillRect(5, 5, 350, 50);
+                
+                // Draw border around debug info
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(5, 5, 350, 50);
+                
+                // Set text properties for debug overlay
                 ctx.fillStyle = '#ff0000';
-                ctx.font = '12px Arial';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                
+                // Draw main debug info
                 ctx.fillText(`Canvas: 800x600 | Grid: 25x25 | Tiles: 32x24`, 10, 20);
                 
                 if (food && typeof food.x === 'number' && typeof food.y === 'number') {
-                    ctx.fillText(`Food at: (${food.x}, ${food.y}) | Canvas pos: (${food.x * 25}, ${food.y * 25})`, 10, 35);
+                    ctx.fillText(`Food at: (${food.x}, ${food.y}) | Canvas pos: (${food.x * 25}, ${food.y * 25})`, 10, 40);
                     
-                                    // Draw a small red dot at the food's grid position for visual reference
-                ctx.fillStyle = '#ff0000';
-                ctx.fillRect(food.x * 25, food.y * 25, 3, 3);
-                console.log('Debug: Drew food position indicator and grid reference');
-            }
+                    // Draw a small red dot at the food's grid position for visual reference
+                    ctx.fillStyle = '#ff0000';
+                    ctx.fillRect(food.x * 25, food.y * 25, 3, 3);
+                    console.log('Debug: Drew food position indicator and grid reference');
+                }
+                
+                // Restore context to prevent interference with other drawing operations
+                ctx.restore();
             
             // Draw debug grid to visualize tile boundaries
             drawDebugGrid();
